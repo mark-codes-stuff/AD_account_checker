@@ -15,9 +15,22 @@ Import-Module ActiveDirectory
 $first = "test"
 $last = "user"
 
+#When testing, I ran into issues where not all of the properties are exported when running -Properties *
+#It will be easier to just run the cmdlet with specified properties that I want and I can always add more later
+$properties = @(
+    "displayName","AccountExpirationDate","Enabled","msDS-UserAccountDisabled","PasswordExpired",
+    "msDS-UserPasswordExpiryTimeComputed","PasswordLastSet","lastLogonTimestamp"
+    )
+
 
 #Perform search for user
-$user = Get-ADUser -Filter "GivenName -like '$first' -and Surname -like '$last'" -Properties *
+try {
+    #ErrorAction Stop to handle missing properties - ensuring the script can at least be tested in any environment
+    $user = Get-ADUser -Filter {GivenName -like $first -and Surname -like $last} -Properties $properties -ErrorAction Stop
+} catch {
+    Write-Warning "An error occurred: $($_.Exception.Message)"
+    Exit 1 #Exit script if the search fails
+}
 
 
 #Some checks
@@ -28,17 +41,20 @@ Write-Host '$last' "is set to:" $last
 
 #AD checks
 Write-Host "Account properties from AD:"
-Write-Host "user raw output (this will probably just show the OU/CN)" $user
-Write-Host "Display name is:" $user.displayName
-Write-Host "Account expiry:" $user.AccountExpirationDate
-Write-Host "Account active:" $user.Enabled
-Write-Host "Alternative account active test:" $user.'msDS-UserAccountDisabled'
-Write-Host "Password expired:" $user.PasswordExpired
-Write-Host "Password expiration date:" $user.'msDS-UserPasswordExpiryTimeComputed'
-Write-Host "Is password change required?:" $user.
-#Removing this as it doesn't really work accurately, maybe re-add it in future: Write-Host "Last recorded network logon:" $user.lastLogonTimestamp
-Write-Host ""
-Write-Host ""
-Write-Host ""
+if ($user) {
+    Write-Host "User raw output (this will probably just show the OU/CN):" $user
+    Write-Host "Display name is:" $user.displayName
+    Write-Host "Account expiry:" $user.AccountExpirationDate
+    Write-Host "Account active:" $user.Enabled
+    Write-Host "Alternative account active test (may not exist):" $($user.'msDS-UserAccountDisabled')
+    Write-Host "Password expired:" $($user.PasswordExpired)
+    Write-Host "Password expiration date (calculated):" $($user.'msDS-UserPasswordExpiryTimeComputed')
+    Write-Host "Is password change required?:" $($user.PasswordLastSet)
+    $lastLogon = [DateTime]::FromFileTime($user.lastLogonTimestamp)
+    Write-Host "Last recorded network logon:" $lastLogon
+} else {
+    Write-Warning "User not found."
+}
+
 
 Pause
