@@ -1,3 +1,5 @@
+#This will be a basic tool for checking AD accounts for common problems
+
 #A fancy title of course
 Write-Host "Basic account checker v1"
 
@@ -13,7 +15,7 @@ $last = "user"
 
 #Perform search for user
 $user = Get-ADUser -Filter "GivenName -like '$first' -and Surname -like '$last'" -Properties *
-# need error handling here in case account not found
+# need error handling here in future case account not found
 
 #Some checks
 Write-Host "some basic checks before anything is actually taken from AD"
